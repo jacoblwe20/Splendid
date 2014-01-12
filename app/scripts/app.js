@@ -4,7 +4,8 @@ var splendid = angular.module('splendid', [
     'ui.ace',
     'splendid.config',
     'splendid.settings',
-    'splendid.header'
+    'splendid.header',
+    'splendid.shortcuts'
 ]);
 
 
@@ -13,12 +14,13 @@ splendid.run(function($rootScope, UI, Settings){
     UI.setStatus('Welcome!');
 });
 
-splendid.controller('AppCtrl', function($rootScope, $scope, File, UI, Settings){
+splendid.controller('AppCtrl', function($rootScope, $scope, File, UI, Settings, Shortcuts){
     $rootScope.ui = UI;
     $rootScope.file = File;
     $rootScope.currentFile = File.getCurrentFile();
     $rootScope.files = File.get();
     $rootScope.status = UI.getStatus();
+    $rootScope.shortcuts = Shortcuts.init( $rootScope );
 
 
     $rootScope.settings = Settings;
