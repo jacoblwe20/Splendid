@@ -32,6 +32,49 @@ splendid.factory('File', function($rootScope, $q){
             }
             return false;
         },
+        // get a package file using a relative path
+        readPackageFile : function ( path, options ) {
+            var self = this,
+                deffered = $q.defer(),
+                entry,
+                file,
+                reader,
+                error = deffered.reject;
+
+            function entrySuccess( _entry ){
+                entry = _entry;
+                if ( entry.isFile ){                
+                    return entry.file( getFile );
+                }
+                error(new Error(path + 'is not a file'));
+                console.warn('readPackageFile cannot read ' + 
+                    path +
+                    " is not a file");
+            }
+
+            function getFile( _file ){
+                file = _file;
+                reader = new FileReader();
+                reader.onerror = error;
+                reader.onloadend = fileReadEnd;
+                reader.readAsText( file );
+            }
+
+            function fileReadEnd( ){
+                deffered.resolve({ 
+                    name: entry.name, 
+                    entry: entry, 
+                    file: reader.result, 
+                    type: file.type !== 'text/plain' ? file.type.split('/')[1] : 'text' 
+                });
+            }
+
+            chrome.runtime.getPackageDirectoryEntry(function( dirEntry ){
+                dirEntry.getFile( path, options, entrySuccess, error )
+            });
+
+            return deffered.promise;
+        },
         open: function(){
             var deffered = $q.defer();
             var self = this;
@@ -39,6 +82,7 @@ splendid.factory('File', function($rootScope, $q){
             chrome.fileSystem.chooseEntry({type: 'openWritableFile'}, function(entry) {
 
                 entry.file(function(file) {
+                    console.log( file );
                     var reader = new FileReader();
 
                     reader.onerror = function(e){

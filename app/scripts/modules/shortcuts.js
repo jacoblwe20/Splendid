@@ -1,28 +1,112 @@
 'use strict';
-console.log('shortcuts');
-angular.module('splendid.shortcuts', ['splendid.config']).
+
+angular.module('splendid.shortcuts', []).
 	factory('Shortcuts', function( ){
-		function loadShortcuts ( $rootScope ) {
-			var ui = $rootScope.ui,
-				file = $rootScope.file;
+		var ui,
+			file,
+			self,
+			$root;
 
-			/*
-			Things that need to be done to get
-			this file working.
+		function parsePrefs(prefs){
+			var keys,
+				fns,
+				patterns;
 
-			1. file.open needs to be able to take a string
-				to open rather then prompting
+			function getPatterns ( key ) {
+				var cmds = key.split(/\,/);
+				return cmds.map( function( str ){
+					return str.replace(/(^\s+|\s+$)/g,'');
+				});
+			}
 
-			2. need to build a function that can take a shortcuts
-				and run a command on either file, ui and more...
+			function getFunctions ( key ) {
+				var chain = prefs[key],
+					type,
+					fn;
 
-			3. loop trough entries in file and load them using 
-				ui.registerShortcut
-			*/
+				if ( typeof chain !== 'string' ) return;
+				chain = chain.split(/\./);
+				type = chain[0];
 
-			debugger;		
+				fn = $root[ type ];
+
+				if ( fn ) {
+					chain.shift();
+					chain.forEach(function( method ){
+						if ( typeof fn[ method ] === 'function' ){
+							fn = fn[ method ];
+						}
+					})
+					if ( typeof fn === 'function' ) {
+						return fn;
+					}
+				}
+			}
+
+			try {
+				prefs = JSON.parse(prefs);
+			} catch (e) {
+				console.warn('Could not load Keyboard Shortcuts');
+				return;
+			}
+
+			keys = Object.keys( prefs );
+			patterns = keys.map( getPatterns );
+			fns = keys.map( getFunctions );
+			return [patterns, fns, keys];
 		}
-		return {
-			init : loadShortcuts
+
+		function loadPreferances ( pref ) {
+			if ( !pref ) return;
+			var patterns = pref[0],
+				fns = pref[1],
+				names = pref[2];
+			patterns.forEach(function( pattern, index ){
+				var fn = fns[ index ],
+					name = names[ index ];
+				if ( fn ) {
+					ui.registerShortcut({
+						name : name,
+						keys : pattern
+					}, fn );
+				}
+			})
+		}
+
+		function getPreferances ( callback ) {
+			// this will be where custom preferances can be found
+			var pref = null/*chrome.storage.local.getItem('shortcuts')*/;
+
+			if ( !pref ){
+				return file.readPackageFile('settings/shortcuts.json')
+					.then(function( result ){
+						if ( callback ) callback ( result.file, result );
+					}, function ( err ) {
+						console.warn( err );
+					})
+			}
+			if ( callback ) callback ( pref );
+		}
+
+		function initialize ( $rootScope ) {
+			ui = $rootScope.ui;
+			file = $rootScope.file;
+			$root = $rootScope;
+
+			getPreferances( function ( _prefs ){
+				var prefs = parsePrefs( _prefs );
+				loadPreferances( prefs );
+			});
+			return self;
+		}
+
+		self = {
+			init : initialize,
+			open : function ( ) {
+				getPreferances(function( prefs, _file ){
+					file.setCurrentFile( _file );
+				});
+			}
 		};
+		return self;
 	})

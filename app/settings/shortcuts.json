@@ -1,0 +1,3 @@
+{
+	"command+s command+c, ctrl+s ctrl+c" : "shortcuts.open"
+}

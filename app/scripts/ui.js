@@ -96,6 +96,8 @@ splendid.factory('UI', function($rootScope, $q, $timeout, File){
             });
         },
 
+
+
         openFile: function(){
             File.open().then(function(file){
                 //$rootScope.currentFile = file;
